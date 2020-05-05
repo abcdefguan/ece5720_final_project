@@ -8,6 +8,11 @@ Graph:: Graph(int _n){
 }
 
 void Graph :: join(int node1, int node2, long long weight){
+	//Ignore if nodes are the same
+	if (node1 == node2){
+		return;
+	}
+	//Join using the smallest weights
 	if (adjlist[node1][node2] == 0){
 		adjlist[node1][node2] = weight;
 	}

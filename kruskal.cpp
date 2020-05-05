@@ -41,9 +41,9 @@ int main(){
 	//Set cout precision
 	cout.precision(2);
 
-	for (int i = 0; i < n_vals.size(); i++){
+	for (int a = 0; a < n_vals.size(); a++){
 		for (int j = 0; j < num_tc; j++){
-			int n = n_vals[i];
+			int n = n_vals[a];
 			UnionFind uf (n);
 			vector<Edge> edges;
 			edges.reserve(n * edges_per_node);
