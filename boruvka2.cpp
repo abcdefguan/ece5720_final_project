@@ -30,8 +30,6 @@ int main(int argc, char ** argv){
 	//Set cout precision
 	cout.precision(2);
 
-	
-
 	//Set a random seed
 	srand(1337);
 	
@@ -40,7 +38,6 @@ int main(int argc, char ** argv){
 
 	UnionFind uf (n);
 	unique_ptr<Graph> g (new Graph (n));
-	unique_ptr<Graph> g2;
 
 	bool is_connected = false;
 	while (!is_connected){
@@ -69,56 +66,45 @@ int main(int argc, char ** argv){
 	chrono::high_resolution_clock::time_point start_time =
 	chrono::high_resolution_clock::now();
 
-	while (n > 1){
-		UnionFind uf_boruvka (n);
+	UnionFind uf_boruvka (n);
+
+	long long minWeight[n];
+	int nearestNode[n];
+
+	while (uf_boruvka.get_num_cc() > 1){
 		set<pair<int, int> > taken_edges;
 		//Determine minimum weight edge for each tree
 		for (int i = 0; i < n; i++){
-			long long minWeight = 1000000000;
-			int nearestNode = -1;
-			for (pair<int, long long> entry : g->adjlist[i]){
-				int target = entry.first;
-				long long weight = entry.second;
-				if (weight < minWeight){
-					minWeight = weight;
-					nearestNode = target;
-				}
-			}
-			//Determine new connected component
-			uf_boruvka.join(i, nearestNode);
-			//Enumerate edges to prevent repeats
-			pair<int, int> p = 
-			make_pair(min(i, nearestNode), max(i, nearestNode));
-			if (taken_edges.count(p) == 0){
-				taken_edges.insert(p);
-				ans += minWeight;
-			}
+			minWeight[i] = 1000000000;
+			nearestNode[i] = -1;
 		}
-		//Renumber connected components
-		//Map of node number to cc number
-		unordered_map<int, int> ccmap;
-		int cccnt = 0;
 		for (int i = 0; i < n; i++){
 			int parent = uf_boruvka.parent(i);
-			//If parent not seen yet
-			if (ccmap.count(parent) == 0){
-				ccmap[parent] = cccnt;
-				cccnt += 1;
-			}
-		}
-		//Collapse graphs together into new graph
-		g2 = make_unique<Graph>(cccnt);
-		for (int i = 0; i < n; i++){
-			int newSrc = ccmap[uf_boruvka.parent(i)];
 			for (pair<int, long long> entry : g->adjlist[i]){
-				int newTarget = ccmap[uf_boruvka.parent(entry.first)];
+				int target = uf_boruvka.parent(entry.first);
 				long long weight = entry.second;
-				g2->join(newSrc, newTarget, weight);
+				
+				if (target != parent && weight < minWeight[parent]){
+					minWeight[parent] = weight;
+					nearestNode[parent] = target;
+				}
 			}
 		}
-		//Replace graphs, update n
-		g = move(g2);
-		n = cccnt;
+		for (int i = 0; i < n; i++){
+			//Ignore if not own parent
+			if (uf_boruvka.parent(i) != i){
+				continue;
+			}
+			//Determine new connected component
+			uf_boruvka.join(i, nearestNode[i]);
+			//Enumerate edges to prevent repeats
+			pair<int, int> p = 
+			make_pair(min(i, nearestNode[i]), max(i, nearestNode[i]));
+			if (taken_edges.count(p) == 0){
+				taken_edges.insert(p);
+				ans += minWeight[i];
+			}
+		}
 	}
 	chrono::high_resolution_clock::time_point end_time = 
 	chrono::high_resolution_clock::now();
