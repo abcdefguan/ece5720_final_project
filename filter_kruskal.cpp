@@ -51,6 +51,47 @@ long long kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 
 }
 
+//Alternative partition => It's 2x slower
+/*int partition(vector<Edge> & edges, long long pivot, int start, int end){
+	vector<unique_ptr<vector<Edge> > > v_less_equal;
+	vector<unique_ptr<vector<Edge> > > v_greater;
+	for (int i = 0; i < p; i++){
+		v_less_equal.emplace_back(make_unique<vector<Edge> >());
+		v_greater.emplace_back(make_unique<vector<Edge> >());
+	}
+	#pragma omp parallel for num_threads(p)
+	for (int i = start; i < end; i++){
+		int tid = omp_get_thread_num();
+		if (edges[i].weight <= pivot){
+			v_less_equal[tid]->push_back(edges[i]);
+		}
+		else{
+			v_greater[tid]->push_back(edges[i]);
+		}
+	}
+	int less_equal_slots[p + 1];
+	int greater_slots[p + 1];
+	less_equal_slots[0] = start;
+	for (int i = 1; i <= p; i++){
+		less_equal_slots[i] = less_equal_slots[i - 1] + v_less_equal[i - 1]->size();
+	}
+	greater_slots[0] = less_equal_slots[p];
+	for (int i = 1; i <= p; i++){
+		greater_slots[i] = greater_slots[i - 1] + v_greater[i - 1]->size();
+	}
+	#pragma omp parallel for schedule(static, 1) num_threads(p)
+	for (int i = 0; i < p; i++){
+		for (int j = 0; j < v_less_equal[i]->size(); j++){
+			edges[less_equal_slots[i] + j] = (*(v_less_equal[i]))[j];
+		}
+		for (int j = 0; j < v_greater[i]->size(); j++){
+			edges[greater_slots[i] + j] = (*(v_greater[i]))[j];
+		}
+	}
+	return less_equal_slots[p];
+}*/
+
+//Partition algorithm => Slows down when parallelized (likely due to cache misses)
 int partition(vector<Edge> & edges, long long pivot, int start, int end){
 	//Strided partitioning algorithm
 	unique_ptr<vector<int> > vi (new vector<int> (p, 0));
@@ -164,6 +205,7 @@ long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 	}
 	long long pivot = edges[(rand() % (end - start)) + start].weight;
 	//split is first element > pivot
+	//Force partition with 1 thread only
 	int prev_p = p;
 	p = 1;
 	int split = partition(edges, pivot, start, end);
