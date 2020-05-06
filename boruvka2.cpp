@@ -80,13 +80,19 @@ int main(int argc, char ** argv){
 		}
 		for (int i = 0; i < n; i++){
 			int parent = uf_boruvka.parent(i);
-			for (pair<int, long long> entry : g->adjlist[i]){
-				int target = uf_boruvka.parent(entry.first);
-				long long weight = entry.second;
+			for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){//pair<int, long long> entry : g->adjlist[i]){
+				int target = uf_boruvka.parent((*it).first);
+				long long weight = (*it).second;
 				
 				if (target != parent && weight < minWeight[parent]){
 					minWeight[parent] = weight;
 					nearestNode[parent] = target;
+				}
+				if (target == parent){
+					it = g->adjlist[i].erase(it);
+				}
+				else{
+					it++;
 				}
 			}
 		}
