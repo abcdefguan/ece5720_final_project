@@ -31,9 +31,9 @@ bool compareEdges(Edge e1, Edge e2){
 }
 
 int main(){
-	array<int,1/*5*/> n_vals = {5/*, 50000, 100000, 500000, 1000000*/};
+	array<int,1/*5*/> n_vals = {100/*, 50000, 100000, 500000, 1000000*/};
 	int num_tc = 1/*5*/;
-	int edges_per_node = 2;
+	int edges_per_node = 10;
 
 	//Set cout precision
 	cout.precision(2);
@@ -56,7 +56,7 @@ int main(){
 						long long weight = (rand() % 100000) + 1;
 						int target = rand() % n;
 						edges.emplace_back(node_num, target, weight);
-						cout << node_num << " " << target << " " << weight << endl;
+						//cout << node_num << " " << target << " " << weight << endl;
 						uf.join(node_num, target);
 					}
 				}
@@ -82,7 +82,7 @@ int main(){
 			for (int i = 0; i < edges.size(); i++){
 				if (!uf_kruskal.query(edges[i].from, edges[i].to)){
 					ans += edges[i].weight;
-					cout << "Taken: " << edges[i].from << " " << edges[i].to << " " << edges[i].weight << endl;
+					//cout << "Taken: " << edges[i].from << " " << edges[i].to << " " << edges[i].weight << endl;
 					uf_kruskal.join(edges[i].from, edges[i].to);
 				}
 				//Joined all the nodes so can be done early

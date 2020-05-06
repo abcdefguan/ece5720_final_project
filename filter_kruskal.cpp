@@ -43,7 +43,7 @@ long long kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 	//Create union find
 	for (int i = start; i < end; i++){
 		if (!uf_kruskal.query(edges[i].from, edges[i].to)){
-			cout << "Taken: " << edges[i].from << " " << edges[i].to << " " << edges[i].weight << endl;
+			//cout << "Taken: " << edges[i].from << " " << edges[i].to << " " << edges[i].weight << endl;
 			ans += edges[i].weight;
 			uf_kruskal.join(edges[i].from, edges[i].to);
 		}
@@ -53,16 +53,22 @@ long long kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 }
 
 int partition(vector<Edge> & edges, long long pivot, int start, int end){
+	//cout << "start: " << start << " end: " << end << endl;
 	//Strided partitioning algorithm
 	vector<int> vi (p, 0);
 	#pragma omp parallel for schedule(static, 1) num_threads(p) 
 	for (int i = 0; i < p; i++)
 	{
-		int left_ptr = start;
-		int right_ptr = (end - start) - (end - start) % p + start;
-		if (right_ptr == end){
+		int left_ptr = start + i;
+		int right_ptr = (end - start) - ((end - start) % p) + start;
+		if (right_ptr >= end){
 			right_ptr -= p;
 		}
+		right_ptr += i;
+		if (right_ptr >= end){
+			right_ptr -= p;
+		}
+		//cout << "tid: " << i << " l: " << left_ptr << " r: " << right_ptr << endl;
 		//Sequential partitioning algorithm
 		while (left_ptr < right_ptr){
 			if (edges[left_ptr].weight <= pivot){
@@ -74,6 +80,7 @@ int partition(vector<Edge> & edges, long long pivot, int start, int end){
 				edges[right_ptr] = edges[left_ptr];
 				edges[left_ptr] = tmp;
 				right_ptr -= p;
+				//cout << "tid: " << i << " swapped " << left_ptr << " with " << right_ptr << endl;
 			}
 		}
 		if (edges[left_ptr].weight <= pivot){
@@ -88,11 +95,25 @@ int partition(vector<Edge> & edges, long long pivot, int start, int end){
 	for (int i = 0; i < p; i++){
 		vmin = min(vmin, vi[i]);
 		vmax = max(vmax, vi[i]);
+		//cout << "vi[" << i << "]: " << vi[i] << endl;
 	}
+	vmin = max(start, vmin);
+	vmax = min(end - 1, vmax);
+	vmin = min(vmin, vmax);
+
+	/*cout << "Partitioned Array with pivot " << pivot << ": " << endl;
+	for (int i = start; i < end; i++){
+		cout << edges[i].weight << " ";
+	}
+	cout << endl;
+	cout << "vmin: " << vmin << " vmax: " << vmax << endl;*/
 	//Sequential partitioning algorithm on vmin to vmax
 	int left_ptr = vmin;
 	int right_ptr = vmax;
+	//cout << "start: " << start << " end: " << end << endl;
+	//cout << "vmin: " << vmin << " vmax: " << vmax << endl;
 	while (left_ptr < right_ptr){
+		//cout << "l: " << left_ptr << "r: " << right_ptr << endl;
 		if (edges[left_ptr].weight <= pivot){
 			left_ptr++;
 		}
@@ -101,9 +122,16 @@ int partition(vector<Edge> & edges, long long pivot, int start, int end){
 			Edge tmp = edges[right_ptr];
 			edges[right_ptr] = edges[left_ptr];
 			edges[left_ptr] = tmp;
-			right_ptr++;
+			right_ptr--;
 		}
+		/*if (left_ptr < start || right_ptr >= end){
+			cout << "Warning: Erroneous Memory Access!!" << endl;
+		}*/
 	}
+	/*if (left_ptr < start || right_ptr >= end){
+		cout << "Warning: Erroneous Memory Access!!" << endl;
+	}*/
+	//cout << "l: " << left_ptr << "r: " << right_ptr << endl;
 	if (edges[left_ptr].weight <= pivot){
 		left_ptr++;
 	}
@@ -118,48 +146,50 @@ int partition(vector<Edge> & edges, long long pivot, int start, int end){
 			cout << "Left Pointer is: " << left_ptr << endl;
 		}
 	}*/
+	//cout << "Done" << endl;
 	return left_ptr;
 }
 
 int filter(vector<Edge> & edges, UnionFind & uf_kruskal, int start, int end){
-	cout << "Filtering..." << endl;
-	cout << "UF kruskal: " << endl;
+	//cout << "Filtering..." << endl;
+	/*cout << "UF kruskal: " << endl;
 	for (int i = 0; i < 5; i++){
 		cout << uf_kruskal.parent(i) << " ";
 	}
+	cout << endl;*/
 	vector<vector<Edge> > filter_results;
-	cout << endl;
+	
 	for (int i = 0; i < p; i++){
 		filter_results.emplace_back();
 	}
-	cout << "UF kruskal: " << endl;
+	/*cout << "UF kruskal: " << endl;
 	for (int i = 0; i < 5; i++){
 		cout << uf_kruskal.parent(i) << " ";
 	}
-	cout << endl;
+	cout << endl;*/
 	#pragma omp parallel for num_threads(p)
 	for (int i = start; i < end; i++){
 		int tid = omp_get_thread_num();
-		cout << "UF kruskal: " << endl;
+		/*cout << "UF kruskal: " << endl;
 		for (int i = 0; i < 5; i++){
 			cout << uf_kruskal.parent(i) << " ";
 		}
 		cout << endl;
 		cout << edges[i].from << " " << edges[i].to << " " << edges[i].weight << endl;
-		cout << uf_kruskal.parent(edges[i].from) << " " << uf_kruskal.parent(edges[i].to) << endl;
+		cout << uf_kruskal.parent(edges[i].from) << " " << uf_kruskal.parent(edges[i].to) << endl;*/
 		if (!uf_kruskal.thread_safe_query(edges[i].from, edges[i].to)){
 			filter_results[tid].push_back(edges[i]);
 		}
 	}
 	//Check filter results
-	cout << "Filter results: " << endl;
+	/*cout << "Filter results: " << endl;
 	for (int i = 0; i < p; i++){
 		cout << "[" << i << "]: ";
 		for (int j = 0; j < filter_results[i].size(); j++){
 			cout << filter_results[i][j].weight << " ";
 		}
 		cout << endl;
-	}
+	}*/
 	int start_pt[p + 1];
 	start_pt[0] = start;
 	for (int i = 1; i <= p; i++){
@@ -179,7 +209,7 @@ int filter(vector<Edge> & edges, UnionFind & uf_kruskal, int start, int end){
 //Note that start is inclusive and end is exclusive
 long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 	int start, int end){
-	cout << "Filter Kruskal called with " << start << " " << end << endl;
+	//cout << "Filter Kruskal called with " << start << " " << end << endl;
 	//We've already found all of our edges
 	if (uf_kruskal.get_num_cc() == 1){
 		return 0;
@@ -191,23 +221,23 @@ long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 		return kruskal(edges, uf_kruskal, start, end);
 	}
 	long long pivot = edges[(rand() % end) + start].weight;
-	cout << "Pivot was: " << pivot << endl;
+	//cout << "Pivot was: " << pivot << endl;
 	//split is first element > pivot
 	int split = partition(edges, pivot, start, end);
-	cout << "Partition yielded: " << endl;
+	/*cout << "Partition yielded: " << endl;
 	for (int i = start; i < end; i++){
 		cout << edges[i].weight << " ";
 	}
 	cout << endl;
-	cout << "split: " << split << endl;
+	cout << "split: " << split << endl;*/
 	ans += filter_kruskal(edges, uf_kruskal, start, split);
 	int filter_split = filter(edges, uf_kruskal, split, end);
-	cout << "filter_split: " << filter_split << endl;
+	/*cout << "filter_split: " << filter_split << endl;
 	cout << "Filtered result was: " << endl;
 	for (int i = split; i < filter_split; i++){
 		cout << edges[i].weight << " ";
 	}
-	cout << endl;
+	cout << endl;*/
 	ans += filter_kruskal(edges, uf_kruskal, split, filter_split);
 	return ans;
 }
@@ -215,9 +245,9 @@ long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 
 
 int main(){
-	array<int,1/*5*/> n_vals = {5/*, 50000, 100000, 500000, 1000000*/};
+	array<int,1/*5*/> n_vals = {100/*, 50000, 100000, 500000, 1000000*/};
 	int num_tc = 1/*5*/;
-	int edges_per_node = 2;
+	int edges_per_node = 10;
 
 	//Set number of threads
 	p = 4;
@@ -242,7 +272,7 @@ int main(){
 						long long weight = (rand() % 100000) + 1;
 						int target = rand() % n;
 						edges.emplace_back(node_num, target, weight);
-						cout << node_num << " " << target << " " << weight << endl;
+						//cout << node_num << " " << target << " " << weight << endl;
 						uf.join(node_num, target);
 					}
 				}
