@@ -43,7 +43,6 @@ int main(int argc, char ** argv){
 	
 	UnionFind uf (n);
 	unique_ptr<Graph> g (new Graph (n));
-	unique_ptr<Graph> g2;
 
 	bool is_connected = false;
 	while (!is_connected){
@@ -72,76 +71,92 @@ int main(int argc, char ** argv){
 	chrono::high_resolution_clock::time_point start_time =
 	chrono::high_resolution_clock::now();
 
-	while (n > 1){
-		cout << "n: " << n << endl;
-		UnionFind uf_boruvka (n);
+	UnionFind uf_boruvka (n);
+
+	long long minWeight[n];
+	int nearestNode[n];
+	omp_lock_t locks[n];
+
+	for (int i = 0; i < n; i++){
+		omp_init_lock(&(locks[i]));
+	}
+
+	while (uf_boruvka.get_num_cc() > 1){
 		set<pair<int, int> > taken_edges;
 		//Determine minimum weight edge for each tree
 		#pragma omp parallel for num_threads(p)
 		for (int i = 0; i < n; i++){
-			//Parallel weight derivation
-			long long minWeight = 1000000000;
-			int nearestNode = -1;
-			for (pair<int, long long> entry : g->adjlist[i]){
-				int target = entry.first;
-				long long weight = entry.second;
-				if (weight < minWeight){
-					minWeight = weight;
-					nearestNode = target;
+			minWeight[i] = 1000000000;
+			nearestNode[i] = -1;
+		}
+		if (uf_boruvka.get_num_cc() > 100){
+			//Parallel code if not too many collisions
+			#pragma omp parallel for num_threads(p)
+			for (int i = 0; i < n; i++){
+				int parent = uf_boruvka.thread_safe_parent(i);
+				for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
+					int target = uf_boruvka.thread_safe_parent((*it).first);
+					long long weight = (*it).second;
+					
+					//possible target
+					if (target != parent){
+						//update and read parent information with lock
+						omp_set_lock(&locks[parent]);
+						if (weight < minWeight[parent]){
+							minWeight[parent] = weight;
+							nearestNode[parent] = target;
+						}
+						omp_unset_lock(&locks[parent]);
+						it++;
+					}
+					else {
+						it = g->adjlist[i].erase(it);
+					}
 				}
+			}
+		}
+		else{
+			//Sequential code otherwise
+			for (int i = 0; i < n; i++){
+				int parent = uf_boruvka.parent(i);
+				for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
+					int target = uf_boruvka.parent((*it).first);
+					long long weight = (*it).second;
+					
+					if (target != parent && weight < minWeight[parent]){
+						minWeight[parent] = weight;
+						nearestNode[parent] = target;
+					}
+					if (target == parent){
+						it = g->adjlist[i].erase(it);
+					}
+					else{
+						it++;
+					}
+				}
+			}
+		}
+		for (int i = 0; i < n; i++){
+			//Ignore if not own parent
+			if (uf_boruvka.parent(i) != i){
+				continue;
 			}
 			//Determine new connected component
-			//Critical section to save results
-			#pragma omp critical
-			{
-				uf_boruvka.join(i, nearestNode);
-				//Enumerate edges to prevent repeats
-				pair<int, int> p = 
-				make_pair(min(i, nearestNode), max(i, nearestNode));
-				if (taken_edges.count(p) == 0){
-					taken_edges.insert(p);
-					ans += minWeight;
-				}
+			uf_boruvka.join(i, nearestNode[i]);
+			//Enumerate edges to prevent repeats
+			pair<int, int> p = 
+			make_pair(min(i, nearestNode[i]), max(i, nearestNode[i]));
+			if (taken_edges.count(p) == 0){
+				taken_edges.insert(p);
+				ans += minWeight[i];
 			}
 		}
-		//Renumber connected components
-		//Map of node number to cc number
-		unordered_map<int, int> ccmap;
-		int cccnt = 0;
-		for (int i = 0; i < n; i++){
-			int parent = uf_boruvka.parent(i);
-			//If parent not seen yet
-			if (ccmap.count(parent) == 0){
-				ccmap[parent] = cccnt;
-				cccnt += 1;
-			}
-		}
-		//Collapse graphs together into new graph
-		chrono::high_resolution_clock::time_point st = 
-		chrono::high_resolution_clock::now();
-		int join_cnt = 0;
-		g2 = make_unique<Graph>(cccnt);
-		for (int i = 0; i < n; i++){
-			int newSrc = ccmap[uf_boruvka.parent(i)];
-			for (pair<int, long long> entry : g->adjlist[i]){
-				int newTarget = ccmap[uf_boruvka.parent(entry.first)];
-				if (newSrc != newTarget){
-					long long weight = entry.second;
-					join_cnt += 1;
-					g2->join(newSrc, newTarget, weight);
-				}
-			}
-		}
-		chrono::high_resolution_clock::time_point et = 
-		chrono::high_resolution_clock::now();
-		cout << "Time Elapsed: " << scientific <<
-		chrono::duration_cast<chrono::nanoseconds>(et - st).count() / 1e9
-		<< " s" << endl;
-		cout << "Join Count: " << join_cnt << endl;
-		//Replace graphs, update n
-		g = move(g2);
-		n = cccnt;
 	}
+
+	for (int i = 0; i < n; i++){
+		omp_destroy_lock(&(locks[i]));
+	}
+
 	chrono::high_resolution_clock::time_point end_time = 
 	chrono::high_resolution_clock::now();
 	cout << "n: " << n << " e: " << edges_per_node << " p: " << p << endl;

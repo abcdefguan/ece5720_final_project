@@ -80,7 +80,7 @@ int main(int argc, char ** argv){
 		}
 		for (int i = 0; i < n; i++){
 			int parent = uf_boruvka.parent(i);
-			for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){//pair<int, long long> entry : g->adjlist[i]){
+			for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
 				int target = uf_boruvka.parent((*it).first);
 				long long weight = (*it).second;
 				
