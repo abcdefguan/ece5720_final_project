@@ -20,15 +20,15 @@ int main(){
 	array<int,1/*5*/> n_vals = {10000/*, 50000, 100000, 500000, 1000000*/};
 	int num_tc = 1/*5*/;
 	int edges_per_node = 10;
-	
-	//Set a random seed
-	srand(1337);
 
 	//Set cout precision
 	cout.precision(2);
 
 	for (int i = 0; i < n_vals.size(); i++){
 		for (int j = 0; j < num_tc; j++){
+			//Set a random seed
+			srand(1337 + j);
+			
 			int n = n_vals[i];
 			UnionFind uf (n);
 			Graph g (n);

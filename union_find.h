@@ -19,7 +19,7 @@ public:
 
 	bool query(int node1, int node2);
 
-	int thread_safe_parent(int node1, int node2);
+	int thread_safe_parent(int node);
 
 	bool thread_safe_query(int node1, int node2);
 

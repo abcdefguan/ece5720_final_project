@@ -31,18 +31,18 @@ bool compareEdges(Edge e1, Edge e2){
 }
 
 int main(){
-	array<int,1/*5*/> n_vals = {10000/*, 50000, 100000, 500000, 1000000*/};
+	array<int,1/*5*/> n_vals = {5/*, 50000, 100000, 500000, 1000000*/};
 	int num_tc = 1/*5*/;
-	int edges_per_node = 10;
-	
-	//Set a random seed
-	srand(1337);
+	int edges_per_node = 2;
 
 	//Set cout precision
 	cout.precision(2);
 
 	for (int a = 0; a < n_vals.size(); a++){
 		for (int j = 0; j < num_tc; j++){
+			//Set a random seed
+			srand(1337 + j);
+
 			int n = n_vals[a];
 			UnionFind uf (n);
 			vector<Edge> edges;
@@ -56,6 +56,7 @@ int main(){
 						long long weight = (rand() % 100000) + 1;
 						int target = rand() % n;
 						edges.emplace_back(node_num, target, weight);
+						cout << node_num << " " << target << " " << weight << endl;
 						uf.join(node_num, target);
 					}
 				}
@@ -81,6 +82,7 @@ int main(){
 			for (int i = 0; i < edges.size(); i++){
 				if (!uf_kruskal.query(edges[i].from, edges[i].to)){
 					ans += edges[i].weight;
+					cout << "Taken: " << edges[i].from << " " << edges[i].to << " " << edges[i].weight << endl;
 					uf_kruskal.join(edges[i].from, edges[i].to);
 				}
 				//Joined all the nodes so can be done early
