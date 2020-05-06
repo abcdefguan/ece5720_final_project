@@ -6,6 +6,8 @@ class UnionFind {
 private:
 	vector<int> connected;
 
+	int num_cc;
+
 public:
 	int n;
 
@@ -16,6 +18,12 @@ public:
 	void join(int node1, int node2);
 
 	bool query(int node1, int node2);
+
+	int thread_safe_parent(int node1, int node2);
+
+	bool thread_safe_query(int node1, int node2);
+
+	int get_num_cc();
 
 	~UnionFind();
 

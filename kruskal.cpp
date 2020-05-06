@@ -77,16 +77,14 @@ int main(){
 			//Sort edges
 			sort(edges.begin(), edges.end(), compareEdges);
 			//Create union find
-			int num_joined = 0;
 			UnionFind uf_kruskal(n);
 			for (int i = 0; i < edges.size(); i++){
 				if (!uf_kruskal.query(edges[i].from, edges[i].to)){
 					ans += edges[i].weight;
 					uf_kruskal.join(edges[i].from, edges[i].to);
-					num_joined += 1;
 				}
 				//Joined all the nodes so can be done early
-				if (num_joined == n - 1){
+				if (uf_kruskal.get_num_cc() == 1){
 					break;
 				}
 			}
