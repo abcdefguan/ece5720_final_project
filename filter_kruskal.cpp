@@ -53,7 +53,7 @@ long long kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 
 int partition(vector<Edge> & edges, long long pivot, int start, int end){
 	//Strided partitioning algorithm
-	vector<int> vi (p, 0);
+	unique_ptr<vector<int> > vi (new vector<int> (p, 0));
 	#pragma omp parallel for schedule(static, 1) num_threads(p) 
 	for (int i = 0; i < p; i++)
 	{
@@ -80,17 +80,17 @@ int partition(vector<Edge> & edges, long long pivot, int start, int end){
 			}
 		}
 		if (edges[left_ptr].weight <= pivot){
-			vi[i] = left_ptr + p;
+			(*vi)[i] = left_ptr + p;
 		}
 		else{
-			vi[i] = left_ptr;
+			(*vi)[i] = left_ptr;
 		}
 	}
-	int vmin = vi[0];
-	int vmax = vi[0];
+	int vmin = (*vi)[0];
+	int vmax = (*vi)[0];
 	for (int i = 0; i < p; i++){
-		vmin = min(vmin, vi[i]);
-		vmax = max(vmax, vi[i]);
+		vmin = min(vmin, (*vi)[i]);
+		vmax = max(vmax, (*vi)[i]);
 	}
 	vmin = max(start, vmin);
 	vmax = min(end - 1, vmax);
@@ -118,28 +118,28 @@ int partition(vector<Edge> & edges, long long pivot, int start, int end){
 }
 
 int filter(vector<Edge> & edges, UnionFind & uf_kruskal, int start, int end){
-	vector<vector<Edge> > filter_results;
+	unique_ptr<vector<vector<Edge> > > filter_results(new vector<vector<Edge> > ());
 	
 	for (int i = 0; i < p; i++){
-		filter_results.emplace_back();
+		filter_results->emplace_back();
 	}
 	#pragma omp parallel for num_threads(p)
 	for (int i = start; i < end; i++){
 		int tid = omp_get_thread_num();
 		if (!uf_kruskal.thread_safe_query(edges[i].from, edges[i].to)){
-			filter_results[tid].push_back(edges[i]);
+			(*filter_results)[tid].push_back(edges[i]);
 		}
 	}
 	int start_pt[p + 1];
 	start_pt[0] = start;
 	for (int i = 1; i <= p; i++){
-		start_pt[i] = start_pt[i - 1] + filter_results[i - 1].size();
+		start_pt[i] = start_pt[i - 1] + (*filter_results)[i - 1].size();
 	}
 	//Combine the filter results
 	#pragma omp parallel for schedule(static, 1) num_threads(p)
 	for (int i = 0; i < p; i++){
-		for (int j = 0; j < filter_results[i].size(); j++){
-			edges[start_pt[i] + j] = filter_results[i][j];
+		for (int j = 0; j < (*filter_results)[i].size(); j++){
+			edges[start_pt[i] + j] = (*filter_results)[i][j];
 		}
 	}
 	//This is the new endpoint
@@ -148,7 +148,10 @@ int filter(vector<Edge> & edges, UnionFind & uf_kruskal, int start, int end){
 
 //Note that start is inclusive and end is exclusive
 long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
-	int start, int end){
+	int start, int end, int depth){
+
+	//cout << "depth: " << depth << "size: " << (end - start) << endl;
+
 	//We've already found all of our edges
 	if (uf_kruskal.get_num_cc() == 1){
 		return 0;
@@ -159,12 +162,20 @@ long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 	if (n < filter_kruskal_threshold){
 		return kruskal(edges, uf_kruskal, start, end);
 	}
-	long long pivot = edges[(rand() % end) + start].weight;
+	long long pivot = edges[(rand() % (end - start)) + start].weight;
 	//split is first element > pivot
 	int split = partition(edges, pivot, start, end);
-	ans += filter_kruskal(edges, uf_kruskal, start, split);
+	//Partition is failing, use normal kruskal (has to do with distribution of edge weights)
+	if (split == end){
+		if (end - start > 1000){
+			cout << "Warning: Large partition failure of " << end - start << endl;
+			cout << "pivot was " << pivot << endl;
+		}
+		return kruskal(edges, uf_kruskal, start, end);
+	}
+	ans += filter_kruskal(edges, uf_kruskal, start, split, depth + 1);
 	int filter_split = filter(edges, uf_kruskal, split, end);
-	ans += filter_kruskal(edges, uf_kruskal, split, filter_split);
+	ans += filter_kruskal(edges, uf_kruskal, split, filter_split, depth + 1);
 	return ans;
 }
 
@@ -190,25 +201,26 @@ int main(int argc, char ** argv){
 	cout.precision(2);
 	//Set a random seed
 	srand(1337);
-	UnionFind uf (n);
-	vector<Edge> edges;
-	edges.reserve(n * edges_per_node);
+	unique_ptr<UnionFind> uf (new UnionFind(n));
+	unique_ptr<vector<Edge> > edges (new vector<Edge> ());
+	edges->reserve(n * edges_per_node);
 
 	bool is_connected = false;
 	while (!is_connected){
 		for (int node_num = 0; node_num < n; node_num++){
 			for (int edge_num = 0; edge_num < edges_per_node; edge_num++){
 				//Edge from node_num to edge_num
-				long long weight = (rand() % 100000) + 1;
+				long long weight = (rand() % 100000000) + 1;
+				//cout << weight << endl;
 				int target = rand() % n;
-				edges.emplace_back(node_num, target, weight);
+				edges->emplace_back(node_num, target, weight);
 				//cout << node_num << " " << target << " " << weight << endl;
-				uf.join(node_num, target);
+				uf->join(node_num, target);
 			}
 		}
 		is_connected = true;
 		for (int node_num = 0; node_num < n; node_num++){
-			if (!uf.query(node_num, 0)){
+			if (!uf->query(node_num, 0)){
 				is_connected = false;
 			}
 		}
@@ -222,10 +234,10 @@ int main(int argc, char ** argv){
 	chrono::high_resolution_clock::time_point start_time =
 	chrono::high_resolution_clock::now();
 
-	UnionFind uf_kruskal(n);
+	unique_ptr<UnionFind> uf_kruskal(new UnionFind (n));
 
 	//Run filter kruskal algorithm
-	ans = filter_kruskal(edges, uf_kruskal, 0, edges.size());
+	ans = filter_kruskal(*edges.get(), *uf_kruskal.get(), 0, edges->size(), 0);
 
 
 	chrono::high_resolution_clock::time_point end_time = 

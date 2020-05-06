@@ -47,7 +47,7 @@ int main(int argc, char ** argv){
 		for (int node_num = 0; node_num < n; node_num++){
 			for (int edge_num = 0; edge_num < edges_per_node; edge_num++){
 				//Edge from node_num to edge_num
-				long long weight = (rand() % 100000) + 1;
+				long long weight = (rand() % 100000000) + 1;
 				int target = rand() % n;
 				g->join(node_num, target, weight);
 				uf.join(node_num, target);
