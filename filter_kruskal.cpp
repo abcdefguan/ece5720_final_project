@@ -164,17 +164,23 @@ long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 	}
 	long long pivot = edges[(rand() % (end - start)) + start].weight;
 	//split is first element > pivot
+	int prev_p = p;
+	p = 1;
 	int split = partition(edges, pivot, start, end);
+	p = prev_p;
 	//Partition is failing, use normal kruskal (has to do with distribution of edge weights)
 	if (split == end){
-		if (end - start > 1000){
+		/*if (end - start > 1000){
 			cout << "Warning: Large partition failure of " << end - start << endl;
 			cout << "pivot was " << pivot << endl;
-		}
+		}*/
 		return kruskal(edges, uf_kruskal, start, end);
 	}
 	ans += filter_kruskal(edges, uf_kruskal, start, split, depth + 1);
+	//int prev_p = p;
+	//p = 1;
 	int filter_split = filter(edges, uf_kruskal, split, end);
+	//p = prev_p;
 	ans += filter_kruskal(edges, uf_kruskal, split, filter_split, depth + 1);
 	return ans;
 }
