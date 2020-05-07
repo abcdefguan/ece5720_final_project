@@ -93,51 +93,35 @@ int main(int argc, char ** argv){
 			nearestNode[i] = -1;
 		}
 		//Parallel code if not too many collisions
-		if (uf_boruvka.get_num_cc() > 100){
-			#pragma omp parallel for num_threads(p)
-			for (int i = 0; i < n; i++){
-				int parent = uf_boruvka.thread_safe_parent(i);
-				for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
-					int target = uf_boruvka.thread_safe_parent((*it).first);
-					long long weight = (*it).second;
-					
-					//possible target
-					if (target != parent){
-						//update and read parent information with lock
-						omp_set_lock(&locks[parent]);
-						if (weight < minWeight[parent]){
-							minWeight[parent] = weight;
-							nearestNode[parent] = target;
-						}
-						omp_unset_lock(&locks[parent]);
-						it++;
+		#pragma omp parallel for num_threads(p)
+		for (int i = 0; i < n; i++){
+			int parent = uf_boruvka.thread_safe_parent(i);
+			int currMinWeight = 1000000000;
+			int currNearestNode = -1;
+			for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
+				int target = uf_boruvka.thread_safe_parent((*it).first);
+				long long weight = (*it).second;
+				
+				//possible target
+				if (target != parent){
+					//update and read parent information with lock
+					if (weight < currMinWeight){
+						currMinWeight = weight;
+						currNearestNode = target;
 					}
-					else {
-						it = g->adjlist[i].erase(it);
-					}
+					it++;
+				}
+				else {
+					it = g->adjlist[i].erase(it);
 				}
 			}
-		}
-		else{
-			//Sequential code otherwise
-			for (int i = 0; i < n; i++){
-				int parent = uf_boruvka.parent(i);
-				for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
-					int target = uf_boruvka.parent((*it).first);
-					long long weight = (*it).second;
-					
-					if (target != parent && weight < minWeight[parent]){
-						minWeight[parent] = weight;
-						nearestNode[parent] = target;
-					}
-					if (target == parent){
-						it = g->adjlist[i].erase(it);
-					}
-					else{
-						it++;
-					}
-				}
+			//Update global minWeight and nearestNode
+			omp_set_lock(&locks[parent]);
+			if (currMinWeight < minWeight[parent]){
+				minWeight[parent] = currMinWeight;
+				nearestNode[parent] = currNearestNode;
 			}
+			omp_unset_lock(&locks[parent]);
 		}
 		#pragma omp parallel for num_threads(p)
 		for (int i = 0; i < n; i++){
