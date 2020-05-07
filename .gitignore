@@ -30,3 +30,14 @@
 *.exe
 *.out
 *.app
+
+# Specific Executables
+boruvka
+boruvka2
+kruskal
+prim
+filter_kruskal
+parallel_boruvka
+
+# Results
+plots/plot.py
