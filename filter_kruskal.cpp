@@ -205,11 +205,11 @@ long long filter_kruskal(vector<Edge> & edges, UnionFind & uf_kruskal,
 	}
 	long long pivot = edges[(rand() % (end - start)) + start].weight;
 	//split is first element > pivot
-	//Force partition with 1 thread only
-	int prev_p = p;
-	p = 1;
+	//Force partition with 1 thread only (partition is inefficient)
+	//int prev_p = p;
+	//p = 1;
 	int split = partition(edges, pivot, start, end);
-	p = prev_p;
+	//p = prev_p;
 	//Partition is failing, use normal kruskal (has to do with distribution of edge weights)
 	if (split == end){
 		/*if (end - start > 1000){

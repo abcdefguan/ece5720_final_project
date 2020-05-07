@@ -1,0 +1,12 @@
+n: 10000 e: 50
+Time Elapsed: 5.50e-02 s
+MST Weight: 11839992701
+n: 100000 e: 50
+Time Elapsed: 6.64e-01 s
+MST Weight: 117276362368
+n: 1000000 e: 50
+Time Elapsed: 7.75e+00 s
+MST Weight: 1168524234477
+n: 10000000 e: 50
+Time Elapsed: 1.05e+02 s
+MST Weight: 11702107435050

@@ -37,7 +37,7 @@ int main(int argc, char ** argv){
 	int edges_per_node = atoi(argv[2]);
 
 	UnionFind uf (n);
-	unique_ptr<Graph> g (new Graph (n));
+	Graph g (n);
 
 	bool is_connected = false;
 	while (!is_connected){
@@ -46,7 +46,7 @@ int main(int argc, char ** argv){
 				//Edge from node_num to edge_num
 				long long weight = (rand() % 100000000) + 1;
 				int target = rand() % n;
-				g->join(node_num, target, weight);
+				g.join(node_num, target, weight);
 				uf.join(node_num, target);
 			}
 		}
@@ -61,6 +61,7 @@ int main(int argc, char ** argv){
 			cout << "Warning: Graph is not connected" << endl;
 		}
 	}
+	//cout << "Graph ready" << endl;
 
 	long long ans = 0;
 	chrono::high_resolution_clock::time_point start_time =
@@ -68,10 +69,11 @@ int main(int argc, char ** argv){
 
 	UnionFind uf_boruvka (n);
 
-	long long minWeight[n];
-	int nearestNode[n];
+	vector<long long> minWeight (n, 0);
+	vector<int> nearestNode (n, 0);
 
 	while (uf_boruvka.get_num_cc() > 1){
+		//cout << "cc: " << uf_boruvka.get_num_cc() << endl;
 		set<pair<int, int> > taken_edges;
 		//Determine minimum weight edge for each tree
 		for (int i = 0; i < n; i++){
@@ -80,7 +82,7 @@ int main(int argc, char ** argv){
 		}
 		for (int i = 0; i < n; i++){
 			int parent = uf_boruvka.parent(i);
-			for (auto it = g->adjlist[i].begin(); it != g->adjlist[i].end(); ){
+			for (auto it = g.adjlist[i].begin(); it != g.adjlist[i].end(); ){
 				int target = uf_boruvka.parent((*it).first);
 				long long weight = (*it).second;
 				
@@ -89,7 +91,7 @@ int main(int argc, char ** argv){
 					nearestNode[parent] = target;
 				}
 				if (target == parent){
-					it = g->adjlist[i].erase(it);
+					it = g.adjlist[i].erase(it);
 				}
 				else{
 					it++;
@@ -112,6 +114,7 @@ int main(int argc, char ** argv){
 			}
 		}
 	}
+
 	chrono::high_resolution_clock::time_point end_time = 
 	chrono::high_resolution_clock::now();
 	cout << "n: " << n << " e: " << edges_per_node << endl;

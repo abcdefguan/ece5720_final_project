@@ -1,0 +1,24 @@
+Compile with: make
+
+Usage:
+
+Sequential Algorithms:
+./prim n e
+./kruskal n e
+./boruvka n e
+./boruvka2 n e
+
+Parallel Algorithms:
+./filter_kruskal n e p
+./parallel_boruvka n e p
+
+Where:
+n = number of nodes in graph (randomly generated)
+e = number of edges in graph
+p = number of threads used (for parallel algorithms)
+
+Boruvka is a version of Boruvka's algorithm that does explicit graph merging
+Boruvka2 is a version of Boruvka's algorithm that merges the graph implicitly. It's about 2-3x faster than Boruvka.
+
+Benchmark with: sh benchmark.sh
+Results generated in results/ folder (will destroy previous results)

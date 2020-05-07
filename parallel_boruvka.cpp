@@ -67,21 +67,24 @@ int main(int argc, char ** argv){
 		}
 	}
 
+	//cout << "Graph ready" << endl;
+
 	long long ans = 0;
 	chrono::high_resolution_clock::time_point start_time =
 	chrono::high_resolution_clock::now();
 
 	UnionFind uf_boruvka (n);
 
-	long long minWeight[n];
-	int nearestNode[n];
-	omp_lock_t locks[n];
+	vector<long long> minWeight (n, 0);
+	vector<int> nearestNode (n, 0);
+	omp_lock_t * locks = (omp_lock_t *) malloc(sizeof(omp_lock_t) * n);
 
 	for (int i = 0; i < n; i++){
 		omp_init_lock(&(locks[i]));
 	}
 
 	while (uf_boruvka.get_num_cc() > 1){
+		//cout << "cc: " << uf_boruvka.get_num_cc() << endl;
 		set<pair<int, int> > taken_edges;
 		//Determine minimum weight edge for each tree
 		#pragma omp parallel for num_threads(p)
@@ -89,8 +92,8 @@ int main(int argc, char ** argv){
 			minWeight[i] = 1000000000;
 			nearestNode[i] = -1;
 		}
+		//Parallel code if not too many collisions
 		if (uf_boruvka.get_num_cc() > 100){
-			//Parallel code if not too many collisions
 			#pragma omp parallel for num_threads(p)
 			for (int i = 0; i < n; i++){
 				int parent = uf_boruvka.thread_safe_parent(i);
@@ -136,19 +139,26 @@ int main(int argc, char ** argv){
 				}
 			}
 		}
+		#pragma omp parallel for num_threads(p)
 		for (int i = 0; i < n; i++){
 			//Ignore if not own parent
 			if (uf_boruvka.parent(i) != i){
 				continue;
 			}
-			//Determine new connected component
-			uf_boruvka.join(i, nearestNode[i]);
+			#pragma omp critical (c1)
+			{
+				//Determine new connected component
+				uf_boruvka.join(i, nearestNode[i]);
+			}
 			//Enumerate edges to prevent repeats
 			pair<int, int> p = 
 			make_pair(min(i, nearestNode[i]), max(i, nearestNode[i]));
-			if (taken_edges.count(p) == 0){
-				taken_edges.insert(p);
-				ans += minWeight[i];
+			#pragma omp critical (c2)
+			{
+				if (taken_edges.count(p) == 0){
+					taken_edges.insert(p);
+					ans += minWeight[i];
+				}
 			}
 		}
 	}
@@ -156,6 +166,8 @@ int main(int argc, char ** argv){
 	for (int i = 0; i < n; i++){
 		omp_destroy_lock(&(locks[i]));
 	}
+
+	free(locks);
 
 	chrono::high_resolution_clock::time_point end_time = 
 	chrono::high_resolution_clock::now();
